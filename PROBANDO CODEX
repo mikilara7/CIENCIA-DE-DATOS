@@ -1,0 +1,511 @@
+  "kernelspec": {
+   "name": "python3",
+   "display_name": "Python 3"
+  },
+  "language_info": {
+   "name": "python"
+  }
+ },
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "id": "_A6Di7RMqPMq"
+   },
+   "source": [
+    "**MAESTRÍA EN INTELIGENCIA ARTIFICIAL APLICADA**\n",
+    "\n",
+    "**Curso: TC5053 - Ciencia y analítica de datos**\n",
+    "\n",
+    "Tecnológico de Monterrey\n",
+    "\n",
+    "Prof Grettel Barceló Alonso\n",
+    "\n",
+    "**Semana 4**\n",
+    "Exploración de datos\n",
+    "\n",
+    "---"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "*   NOMBRE: ---------------------------------------------------------\n",
+    "*   MATRÍCULA: ----------------------------------------------------"
+   ],
+   "metadata": {
+    "id": "sqEasjdWFy4W"
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "En esta actividad trabajarás con el archivo `personal_loan.csv`, basado en un conjunto de datos sobre clientes bancarios y su comportamiento financiero disponible en Kaggle.\n",
+    "\n",
+    "Los datos fueron recopilados para analizar la posibilidad de que los clientes acepten un préstamo personal y contienen información demográfica, financiera y de productos bancarios asociados. Los indicadores incluidos son:\n",
+    "\n",
+    "* `ID`: Identificador único del cliente\n",
+    "* `Age`: Edad del cliente (años completos)\n",
+    "* `Experience`: Experiencia laboral en años\n",
+    "* `Income`: Ingreso anual del cliente (en miles de dólares. Por ejemplo, 60 = 60,000 USD/año)\n",
+    "* `ZIP Code`: Código postal del cliente\n",
+    "* `Family`: Número de miembros de la familia\n",
+    "* `CCAvg`: Promedio de gastos mensuales con tarjeta de crédito (en miles de dólares)\n",
+    "* `Education`: Nivel educativo (1 = graduado, 2 = universitario, 3 = posgrado)\n",
+    "* `Mortgage`: Monto de hipoteca que posee el cliente (en miles de dólares)\n",
+    "* `Securities Account`: Indicador de si tiene cuenta de valores (1 = sí, 0 = no)\n",
+    "* `CD Account`: Indicador de si tiene cuenta de certificado de depósito (1 = sí, 0 = no)\n",
+    "* `Online`: Indicador de si usa los servicios bancarios en línea (1 = sí, 0 = no)\n",
+    "* `CreditCard`: Indicador de si es titular de tarjeta de crédito (1 = sí, 0 = no)\n",
+    "* `Personal Loan`: Si el cliente aceptó (1) o no (0) un préstamo personal. Es la variable de salida o *target*, es decir, la que se pretende predecir más adelante al construir el modelo\n",
+    "\n",
+    "**NOTA IMPORTANTE:** Asegúrate de responder *explícitamente* todos los cuestionamientos."
+   ],
+   "metadata": {
+    "id": "tmKkt1NJF589"
+   }
+  },
+  {
+   "cell_type": "code",
+   "metadata": {
+    "id": "m0kt9tIIqOa2"
+   },
+   "source": [
+    "# Importar las bibliotecas necesarias\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "import seaborn as sns\n",
+    "from scipy.stats import norm"
+   ],
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "id": "j0duxompyOYS"
+   },
+   "source": [
+    "1. Descarga el archivo: `personal_loan.csv` y guarda, en un dataframe (`loan_df`), todos sus registros.\n",
+    "* Haz que la columna `ID` sea el índice del dataframe.\n",
+    "* Utiliza el método `info()` del dataframe, para obtener el resumen de los tipos de datos. ¿Cuántas columnas son numéricas y cuántas de texto?"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Cargar datos\n",
+    "loan_df = pd.read_csv('personal_loan.csv')\n",
+    "loan_df = loan_df.set_index('ID')\n",
+    "\n",
+    "# Resumen de tipos de datos\n",
+    "loan_df.info()\n",
+    "\n",
+    "num_count = loan_df.select_dtypes(include=['int64', 'float64']).shape[1]\n",
+    "text_count = loan_df.select_dtypes(include=['object']).shape[1]\n",
+    "print(f'Columnas numéricas: {num_count}')\n",
+    "print(f'Columnas de texto: {text_count}')"
+   ],
+   "metadata": {
+    "id": "daIX_yoPiiRc"
+   },
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "# Limpieza"
+   ],
+   "metadata": {
+    "id": "KFPKvzz2KLyx"
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "2. Obtén las estadísticas descriptivas de las variables numéricas y examina cuidadosamente los valores obtenidos de cada columna.\n",
+    "* Filtra el dataframe para visualizar los registros en que la edad supera los 100 años y elimínalos si no son pausibles.\n",
+    "* Analiza el resto de las variables y elimina aquellos registros que contengan valores inválidos o inconsistentes. Para cada acción que realices, justifica la decisión, explicando por qué consideras que el valor es incorrecto.\n",
+    "* ¿Cuántos registros se eliminaron (considerando todas las acciones de este ejercicio) y qué porcentaje representa respecto al total del dataframe inicial?"
+   ],
+   "metadata": {
+    "id": "h7hnoGO41Xr6"
+   }
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Estadísticas descriptivas de variables numéricas\n",
+    "print(loan_df.describe())\n",
+    "\n",
+    "initial_rows = loan_df.shape[0]\n",
+    "\n",
+    "# Filtrar edades no plausibles (>100 años)\n",
+    "age_invalid = loan_df[loan_df['Age'] > 100]\n",
+    "print('Registros con edad > 100:', age_invalid.shape[0])\n",
+    "loan_df = loan_df[loan_df['Age'] <= 100]\n",
+    "\n",
+    "# Experiencia laboral negativa (inconsistente)\n",
+    "exp_invalid = loan_df[loan_df['Experience'] < 0]\n",
+    "print('Registros con experiencia negativa:', exp_invalid.shape[0])\n",
+    "loan_df = loan_df[loan_df['Experience'] >= 0]\n",
+    "\n",
+    "# Tamaño de familia negativo (inconsistente)\n",
+    "family_invalid = loan_df[loan_df['Family'] < 0]\n",
+    "print('Registros con familia negativa:', family_invalid.shape[0])\n",
+    "loan_df = loan_df[loan_df['Family'] >= 0]\n",
+    "\n",
+    "# Nivel educativo inválido (fuera de 1-3)\n",
+    "edu_invalid = loan_df[~loan_df['Education'].isin([1, 2, 3])]\n",
+    "print('Registros con educación inválida:', edu_invalid.shape[0])\n",
+    "loan_df = loan_df[loan_df['Education'].isin([1, 2, 3])]\n",
+    "\n",
+    "# ZIP Code inválido (longitud distinta de 5)\n",
+    "zip_invalid = loan_df[loan_df['ZIP Code'].astype(str).str.len() != 5]\n",
+    "print('Registros con ZIP Code inválido:', zip_invalid.shape[0])\n",
+    "loan_df = loan_df[loan_df['ZIP Code'].astype(str).str.len() == 5]\n",
+    "\n",
+    "removed_rows = initial_rows - loan_df.shape[0]\n",
+    "removed_pct = removed_rows / initial_rows * 100\n",
+    "print(f'Registros eliminados: {removed_rows} ({removed_pct:.2f}%)')"
+   ],
+   "metadata": {
+    "id": "eNyd-5YHisbb"
+   },
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "3. Obtén las estadísticas descriptivas de las variables de texto e imprime las frecuencias de sus categorías.\n",
+    "* Algunas columnas almacenan valores binarios utilizando distintos formatos. Unifica estos valores de manera consistente, asegurándote de que coincidan con la descripción de las variables al inicio de esta libreta."
+   ],
+   "metadata": {
+    "id": "70wsFPdd1xOV"
+   }
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Estadísticas descriptivas de variables de texto\n",
+    "text_cols = loan_df.select_dtypes(include=['object']).columns\n",
+    "print(loan_df[text_cols].describe())\n",
+    "\n",
+    "# Frecuencia de categorías en variables de texto\n",
+    "for col in text_cols:\n",
+    "    print(f\"\n",
+    "Frecuencias para {col}:\")\n",
+    "    print(loan_df[col].value_counts())\n",
+    "\n",
+    "# Unificar variables binarias con formatos Yes/No y 0/1\n",
+    "binary_cols = ['Securities Account', 'CD Account', 'Online', 'CreditCard', 'Personal Loan']\n",
+    "for col in binary_cols:\n",
+    "    loan_df[col] = loan_df[col].replace({'Yes': 1, 'No': 0}).astype(int)"
+   ],
+   "metadata": {
+    "id": "dg0JZOPRixkl"
+   },
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "4. Verifica si hay registros duplicados y si fuera así, elimínalos del dataframe.\n",
+    "* Asegúrate de reiniciar el índice para mantener una secuencia continua tras todas las eliminaciones de registros que hasta este punto se han realizado."
+   ],
+   "metadata": {
+    "id": "gpVAGn_R188i"
+   }
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Verificar y eliminar duplicados\n",
+    "print('Duplicados:', loan_df.duplicated().sum())\n",
+    "loan_df = loan_df.drop_duplicates()\n",
+    "\n",
+    "# Reiniciar índice para mantener secuencia continua\n",
+    "loan_df = loan_df.reset_index(drop=True)"
+   ],
+   "metadata": {
+    "id": "PKWAdNIei1Eh"
+   },
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "5. Aunque hasta ahora se han considerado los tipos de datos inferidos por pandas, antes del EDA es recomendable revisar la naturaleza estadística de cada variable (continua, discreta, categórica, binaria, etc.) para aplicar el análisis adecuado.\n",
+    "\n",
+    "* Efectúa las siguientes conversiones:\n",
+    "  - Nominal: ZIP Code - `object`\n",
+    "  - Ordinal: Education - `category` con orden 1, 2, 3\n",
+    "  - Binarias: Personal Loan, Securities Account, CD Account, Online, CreditCard - `category`\n",
+    "* Crea dos listas llamadas `num_cols` y `cat_cols` que contengan los nombres de las variables numéricas (int64, float64) y categóricas (object, category) del dataset, respectivamente."
+   ],
+   "metadata": {
+    "id": "yjfdmlKBLZIc"
+   }
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Conversiones de tipo\n",
+    "loan_df['ZIP Code'] = loan_df['ZIP Code'].astype(str)\n",
+    "loan_df['Education'] = pd.Categorical(loan_df['Education'], categories=[1, 2, 3], ordered=True)\n",
+    "\n",
+    "binary_cols = ['Personal Loan', 'Securities Account', 'CD Account', 'Online', 'CreditCard']\n",
+    "for col in binary_cols:\n",
+    "    loan_df[col] = loan_df[col].astype('category')\n",
+    "\n",
+    "# Listas de columnas numéricas y categóricas\n",
+    "num_cols = loan_df.select_dtypes(include=['int64', 'float64']).columns.tolist()\n",
+    "cat_cols = loan_df.select_dtypes(include=['object', 'category']).columns.tolist()\n",
+    "\n",
+    "print('Columnas numéricas:', num_cols)\n",
+    "print('Columnas categóricas:', cat_cols)"
+   ],
+   "metadata": {
+    "id": "-K5crDS_i_1F"
+   },
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "# Análisis exploratorio de datos (univariado)"
+   ],
+   "metadata": {
+    "id": "VyryUnDdKyAW"
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "6. Para el análisis de las variables numéricas obtén nuevamente las estadísticas descriptivas incluyendo los valores de simetría y curtosis.\n",
+    "* Clasifica las variables `Age`, `Income` y `Mortgage` según los valores observados de asimetría y curtosis."
+   ],
+   "metadata": {
+    "id": "5RenXsRbdQHd"
+   }
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Estadísticas descriptivas con asimetría y curtosis\n",
+    "numeric_desc = loan_df[num_cols].describe().T\n",
+    "numeric_desc['skew'] = loan_df[num_cols].skew()\n",
+    "numeric_desc['kurtosis'] = loan_df[num_cols].kurtosis()\n",
+    "print(numeric_desc)\n",
+    "\n",
+    "# Clasificación de Age, Income y Mortgage\n",
+    "for col in ['Age', 'Income', 'Mortgage']:\n",
+    "    skew_val = numeric_desc.loc[col, 'skew']\n",
+    "    kurt_val = numeric_desc.loc[col, 'kurtosis']\n",
+    "    if skew_val > 0:\n",
+    "        skew_label = 'asimetría positiva (sesgo a la derecha)'\n",
+    "    elif skew_val < 0:\n",
+    "        skew_label = 'asimetría negativa (sesgo a la izquierda)'\n",
+    "    else:\n",
+    "        skew_label = 'simétrica'\n",
+    "\n",
+    "    if kurt_val > 0:\n",
+    "        kurt_label = 'leptocúrtica'\n",
+    "    elif kurt_val < 0:\n",
+    "        kurt_label = 'platicúrtica'\n",
+    "    else:\n",
+    "        kurt_label = 'mesocúrtica'\n",
+    "\n",
+    "    print(f\"{col}: {skew_label}, {kurt_label}\")"
+   ],
+   "metadata": {
+    "id": "YhEDW3zJjB42"
+   },
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "7. Genera un histograma para cada variable numérica, incluyendo la curva KDE y la curva de una distribución normal como referencia.\n",
+    "* Para las variables que clasificaste antes, compara los histogramas generados con los valores numéricos calculados y comenta si la forma de cada distribución coincide con lo esperado.\n",
+    "* Para cada variable, crea un gráfico de boxplot individual que incluya la media.\n",
+    "* Analiza la posición de la media respecto a la mediana. ¿Qué indica esta relación sobre el sesgo (asimetría) de la distribución?"
+   ],
+   "metadata": {
+    "id": "2tXZbd78V6ok"
+   }
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Histogramas con KDE y curva normal\n",
+    "for col in num_cols:\n",
+    "    plt.figure(figsize=(6, 4))\n",
+    "    sns.histplot(loan_df[col], kde=True, stat='density', color='skyblue')\n",
+    "    mu, sigma = loan_df[col].mean(), loan_df[col].std()\n",
+    "    x = np.linspace(loan_df[col].min(), loan_df[col].max(), 200)\n",
+    "    plt.plot(x, norm.pdf(x, mu, sigma), color='red', label='Normal')\n",
+    "    plt.title(f'Histograma de {col}')\n",
+    "    plt.legend()\n",
+    "    plt.show()\n",
+    "\n",
+    "# Boxplots individuales con media\n",
+    "for col in num_cols:\n",
+    "    plt.figure(figsize=(4, 5))\n",
+    "    sns.boxplot(y=loan_df[col], color='lightgray')\n",
+    "    plt.scatter(0, loan_df[col].mean(), color='red', label='Media')\n",
+    "    plt.title(f'Boxplot de {col}')\n",
+    "    plt.legend()\n",
+    "    plt.show()\n",
+    "\n",
+    "# Comparación de media vs mediana\n",
+    "for col in num_cols:\n",
+    "    mean_val = loan_df[col].mean()\n",
+    "    median_val = loan_df[col].median()\n",
+    "    if mean_val > median_val:\n",
+    "        relation = 'media > mediana (sesgo a la derecha)'\n",
+    "    elif mean_val < median_val:\n",
+    "        relation = 'media < mediana (sesgo a la izquierda)'\n",
+    "    else:\n",
+    "        relation = 'media ≈ mediana (distribución simétrica)'\n",
+    "    print(f'{col}: {relation}')"
+   ],
+   "metadata": {
+    "id": "Hkw8lTnnjGEy"
+   },
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "8. Obtén las estadísticas descriptivas de las variables categóricas.\n",
+    "* Genera un gráfico de barras para cada variable. En las de alta cardinalidad, sólo incluye los 10 valores más relevantes."
+   ],
+   "metadata": {
+    "id": "bX7qZJW8df7t"
+   }
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Estadísticas descriptivas de variables categóricas\n",
+    "print(loan_df[cat_cols].describe())\n",
+    "\n",
+    "# Gráficos de barras para variables categóricas\n",
+    "for col in cat_cols:\n",
+    "    plt.figure(figsize=(6, 4))\n",
+    "    if loan_df[col].nunique() > 10:\n",
+    "        data = loan_df[col].value_counts().head(10)\n",
+    "        sns.barplot(x=data.index.astype(str), y=data.values)\n",
+    "        plt.title(f'Top 10 categorías de {col}')\n",
+    "    else:\n",
+    "        data = loan_df[col].value_counts()\n",
+    "        sns.barplot(x=data.index.astype(str), y=data.values)\n",
+    "        plt.title(f'Frecuencia de {col}')\n",
+    "    plt.xticks(rotation=45)\n",
+    "    plt.ylabel('Frecuencia')\n",
+    "    plt.show()"
+   ],
+   "metadata": {
+    "id": "xGFYy3PujILb"
+   },
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "# Análisis exploratorio de datos (bivariado)"
+   ],
+   "metadata": {
+    "id": "jWJK0E-3VU3h"
+   }
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "9. Obtén la matriz de gráficos de dispersión (*scatter matrix*) de todas las variables numéricas.\n",
+    "* Observa las relaciones entre las variables, selecciona un par representativo y describe los patrones o tendencias que sean evidentes.\n",
+    "* Para cuantificar la fuerza y dirección de las relaciones observadas, genera un mapa de calor con los valores de correlación de *Pearson*. ¿El valor numérico obtenido del par seleccionado se corresponde con lo esperado?"
+   ],
+   "metadata": {
+    "id": "KEgSof88Yh12"
+   }
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Matriz de dispersión de variables numéricas\n",
+    "pd.plotting.scatter_matrix(loan_df[num_cols], figsize=(12, 12), diagonal='kde')\n",
+    "plt.show()\n",
+    "\n",
+    "# Correlación de Pearson y mapa de calor\n",
+    "corr = loan_df[num_cols].corr()\n",
+    "plt.figure(figsize=(8, 6))\n",
+    "sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f')\n",
+    "plt.title('Matriz de correlación (Pearson)')\n",
+    "plt.show()\n",
+    "\n",
+    "# Ejemplo de par representativo\n",
+    "pair_corr = corr.loc['Income', 'CCAvg']\n",
+    "print(f'Correlación Income vs CCAvg: {pair_corr:.2f}')"
+   ],
+   "metadata": {
+    "id": "FXU5Dk2CjLR5"
+   },
+   "execution_count": 1,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "10. Realiza un análisis de todas las variables del dataset con respecto a la variable de salida `Personal Loan`.\n",
+    "* Variables numéricas: Genera box plots para comparar la distribución de cada variable según los valores de `Personal Loan`.\n",
+    "* Variables categóricas (sin considerar `ZIP Code`): Genera gráficos de barras apiladas que muestren la distribución relativa de `Personal Loan` dentro de cada categoría de la variable.\n",
+    "* Para cada grupo de variables (numéricas y categóricas), comenta al menos un hallazgo o patrón relevante observado en los gráficos generados.\n"
+   ],
+   "metadata": {
+    "id": "bCTsYp1KeCon"
+   }
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Boxplots de variables numéricas vs Personal Loan\n",
+    "for col in num_cols:\n",
+    "    plt.figure(figsize=(6, 4))\n",
+    "    sns.boxplot(x='Personal Loan', y=col, data=loan_df)\n",
+    "    plt.title(f'{col} vs Personal Loan')\n",
+    "    plt.show()\n",
+    "\n",
+    "# Barras apiladas para variables categóricas (excluyendo ZIP Code)\n",
+    "cat_no_zip = [c for c in cat_cols if c != 'ZIP Code']\n",
+    "\n",
+    "for col in cat_no_zip:\n",
+    "    ctab = pd.crosstab(loan_df[col], loan_df['Personal Loan'], normalize='index')\n",
+    "    ctab.plot(kind='bar', stacked=True, figsize=(6, 4))\n",
+    "    plt.title(f'{col} vs Personal Loan (proporciones)')\n",
+    "    plt.ylabel('Proporción')\n",
+    "    plt.legend(title='Personal Loan')\n",
+    "    plt.show()\n",
+    "\n",
+    "# Hallazgos básicos\n",
+    "print('Hallazgos numéricos: revisar boxplots para observar diferencias de ingresos y gasto en clientes con préstamo.')\n",
+    "print('Hallazgos categóricos: revisar barras apiladas para identificar categorías con mayor proporción de aceptación.')"
+   ],
+   "metadata": {
+    "id": "cvzRV-T7jMtS"
+   },
+   "execution_count": 1,
+   "outputs": []
+  }
+ ]
+}
